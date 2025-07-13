@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocabVoyage AI - ฝึกศัพท์ภาษาอังกฤษ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f0f4f8;
+            color: #073B4C;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            transition: all 0.3s ease-in-out;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .btn:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background-color: #118AB2;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #073B4C;
+        }
+        .btn-secondary {
+            background-color: #FFD166;
+            color: #073B4C;
+        }
+        .btn-secondary:hover:not(:disabled) {
+             background-color: #e5b84a;
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+        
+        .reward-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        .reward-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .reward-modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            transform: scale(0.7);
+            transition: all 0.3s ease-in-out;
+        }
+        .reward-modal-overlay.active .reward-modal-content {
+            transform: scale(1);
+        }
+        .treasure-chest {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 1rem;
+            position: relative;
+            font-size: 100px;
+            line-height: 150px;
+        }
+        .chest-open {
+            animation: open-chest 1s forwards;
+        }
+        @keyframes open-chest {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-20deg); }
+            100% { transform: rotate(-15deg); }
+        }
+        .reward-item {
+            animation: reveal-item 1.5s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        @keyframes reveal-item {
+            0% { opacity: 0; }
+            50% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div id="app" class="container mx-auto p-4 max-w-2xl text-center">
+
+        <!-- Game Screen -->
+        <div id="game-screen">
+            <header class="mb-4">
+                 <h1 class="text-3xl font-bold mb-2">VocabVoyage AI</h1>
+            </header>
+            <main id="game-card" class="card">
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <div><span class="text-gray-500">Level</span><p id="level-display" class="text-2xl font-bold text-[#118AB2]">1</p></div>
+                    <div><span class="text-gray-500">คำที่</span><p id="word-progress-display" class="text-2xl font-bold">1 / 15</p></div>
+                    <div>
+                        <span class="text-gray-500">คะแนน</span>
+                        <div class="flex items-baseline justify-center gap-1">
+                            <p id="score-display" class="text-2xl font-bold text-[#06D6A0]">0.00</p>
+                            <p class="text-sm text-gray-500">/ 10</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="my-8">
+                    <div class="flex items-center justify-center gap-4">
+                        <h2 id="word-display" class="text-6xl md:text-7xl font-bold tracking-wider">Hello</h2>
+                        <button id="listen-button" title="ฟังเสียง" class="bg-blue-100 text-blue-600 rounded-full p-3 text-2xl hover:bg-blue-200 transition-colors">🔊</button>
+                    </div>
+                    <p id="ipa-display" class="text-2xl text-gray-500 mt-2">/həˈloʊ/</p>
+                    <p id="thai-display" class="text-2xl text-[#06D6A0] font-semibold mt-2">สวัสดี</p>
+                </div>
+                <button id="speak-button" class="btn btn-primary w-full md:w-auto pulse-animation">🎤 กดเพื่อพูด</button>
+                <div id="result-display" class="mt-6 p-4 rounded-lg min-h-[100px] flex items-center justify-center transition-all duration-300"><p id="result-text" class="text-lg font-semibold">รอการออกเสียง...</p></div>
+                <button id="next-button" class="btn btn-secondary w-full mt-4" style="display: none;">คำต่อไป →</button>
+            </main>
+        </div>
+
+        <!-- Reward Modal -->
+        <div id="reward-modal" class="reward-modal-overlay">
+            <div class="reward-modal-content">
+                <h2 class="text-2xl font-bold mb-2">ผ่านด่านสำเร็จ!</h2>
+                <div id="treasure-chest-icon" class="treasure-chest">📦</div>
+                <div id="reward-item-display" class="reward-item">
+                    <p class="text-gray-600">คุณได้รับ:</p>
+                    <p id="reward-item-name" class="text-xl font-bold"></p>
+                </div>
+                <button id="close-reward-button" class="btn btn-primary w-full mt-6">ไปด่านต่อไป!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- VOCABULARY & REWARD DATA ---
+        const allWords = [
+            {word: "ability", ipa:"/əˈbɪl.ə.t̬i/", thai: "ความสามารถ"}, {word: "account", ipa:"/əˈkaʊnt/", thai: "บัญชี"}, {word: "access", ipa:"/ˈæk.ses/", thai: "การเข้าถึง"}, {word: "achieve", ipa:"/əˈtʃiːv/", thai: "บรรลุ"}, {word: "advantage", ipa:"/ədˈvæn.t̬ɪdʒ/", thai: "ข้อได้เปรียบ"}, {word: "affect", ipa:"/əˈfekt/", thai: "ส่งผลกระทบ"}, {word: "algorithm", ipa:"/ˈæl.ɡə.rɪ.ðəm/", thai: "อัลกอริทึม"}, {word: "allow", ipa:"/əˈlaʊ/", thai: "อนุญาต"}, {word: "analysis", ipa:"/əˈnæl.ə.sɪs/", thai: "การวิเคราะห์"}, {word: "application", ipa:"/ˌæp.ləˈkeɪ.ʃən/", thai: "แอปพลิเคชัน"}, {word: "artificial", ipa:"/ˌɑːr.t̬əˈfɪʃ.əl/", thai: "เทียม"}, {word: "aspect", ipa:"/ˈæs.pekt/", thai: "แง่มุม"}, {word: "assistant", ipa:"/əˈsɪs.tənt/", thai: "ผู้ช่วย"}, {word: "automatic", ipa:"/ˌɑː.t̬əˈmæt̬.ɪk/", thai: "อัตโนมัติ"}, {word: "aware", ipa:"/əˈwer/", thai: "ตระหนัก"},
+            {word: "basic", ipa:"/ˈbeɪ.sɪk/", thai: "พื้นฐาน"}, {word: "benefit", ipa:"/ˈben.ə.fɪt/", thai: "ประโยชน์"}, {word: "calculate", ipa:"/ˈkæl.kjə.leɪt/", thai: "คำนวณ"}, {word: "capacity", ipa:"/kəˈpæs.ə.t̬i/", thai: "ความจุ"}, {word: "challenge", ipa:"/ˈtʃæl.ɪndʒ/", thai: "ความท้าทาย"}, {word: "change", ipa:"/tʃeɪndʒ/", thai: "เปลี่ยนแปลง"}, {word: "code", ipa:"/koʊd/", thai: "รหัส/โค้ด"}, {word: "collect", ipa:"/kəˈlekt/", thai: "รวบรวม"}, {word: "communication", ipa:"/kəˌmjuː.nəˈkeɪ.ʃən/", thai: "การสื่อสาร"}, {word: "complex", ipa:"/ˈkɑːm.pleks/", thai: "ซับซ้อน"}, {word: "computer", ipa:"/kəmˈpjuː.t̬ɚ/", thai: "คอมพิวเตอร์"}, {word: "connect", ipa:"/kəˈnekt/", thai: "เชื่อมต่อ"}, {word: "consider", ipa:"/kənˈsɪd.ɚ/", thai: "พิจารณา"}, {word: "contain", ipa:"/kənˈteɪn/", thai: "ประกอบด้วย"}, {word: "control", ipa:"/kənˈtroʊl/", thai: "ควบคุม"},
+            {word: "create", ipa:"/kriˈeɪt/", thai: "สร้างสรรค์"}, {word: "current", ipa:"/ˈkɝː.ənt/", thai: "ปัจจุบัน"}, {word: "data", ipa:"/ˈdeɪ.t̬ə/", thai: "ข้อมูล"}, {word: "define", ipa:"/dɪˈfaɪn/", thai: "กำหนด/นิยาม"}, {word: "design", ipa:"/dɪˈzaɪn/", thai: "ออกแบบ"}, {word: "develop", ipa:"/dɪˈvel.əp/", thai: "พัฒนา"}, {word: "device", ipa:"/dɪˈvaɪs/", thai: "อุปกรณ์"}, {word: "digital", ipa:"/ˈdɪdʒ.ə.t̬əl/", thai: "ดิจิทัล"}, {word: "discover", ipa:"/dɪˈskʌv.ɚ/", thai: "ค้นพบ"}, {word: "discuss", ipa:"/dɪˈskʌs/", thai: "อภิปราย"}, {word: "display", ipa:"/dɪˈspleɪ/", thai: "จัดแสดง/หน้าจอ"}, {word: "effective", ipa:"/əˈfek.tɪv/", thai: "มีประสิทธิภาพ"}, {word: "efficient", ipa:"/ɪˈfɪʃ.ənt/", thai: "มีประสิทธิภาพ"}, {word: "electronic", ipa:"/iˌlekˈtrɑː.nɪk/", thai: "อิเล็กทรอนิกส์"}, {word: "essential", ipa:"/ɪˈsen.ʃəl/", thai: "จำเป็น"},
+            {word: "feature", ipa:"/ˈfiː.tʃɚ/", thai: "คุณสมบัติ"}, {word: "function", ipa:"/ˈfʌŋk.ʃən/", thai: "ฟังก์ชัน"}, {word: "generate", ipa:"/ˈdʒen.ə.reɪt/", thai: "สร้าง"}, {word: "goal", ipa:"/ɡoʊl/", thai: "เป้าหมาย"}, {word: "hardware", ipa:"/ˈhɑːrd.wer/", thai: "ฮาร์ดแวร์"}, {word: "human", ipa:"/ˈhjuː.mən/", thai: "มนุษย์"}, {word: "identify", ipa:"/aɪˈden.t̬ə.faɪ/", thai: "ระบุ"}, {word: "image", ipa:"/ˈɪm.ɪdʒ/", thai: "รูปภาพ"}, {word: "impact", ipa:"/ˈɪm.pækt/", thai: "ผลกระทบ"}, {word: "improve", ipa:"/ɪmˈpruːv/", thai: "ปรับปรุง"}, {word: "include", ipa:"/ɪnˈkluːd/", thai: "รวมถึง"}, {word: "increase", ipa:"/ɪnˈkriːs/", thai: "เพิ่มขึ้น"}, {word: "industry", ipa:"/ˈɪn.də.stri/", thai: "อุตสาหกรรม"}, {word: "information", ipa:"/ˌɪn.fɚˈmeɪ.ʃən/", thai: "ข้อมูล"}, {word: "input", ipa:"/ˈɪn.pʊt/", thai: "ข้อมูลเข้า"},
+            {word: "install", ipa:"/ɪnˈstɔːl/", thai: "ติดตั้ง"}, {word: "instruction", ipa:"/ɪnˈstrʌk.ʃən/", thai: "คำสั่ง"}, {word: "intelligence", ipa:"/ɪnˈtel.ə.dʒəns/", thai: "ปัญญา"}, {word: "interact", ipa:"/ˌɪn.t̬ɚˈækt/", thai: "โต้ตอบ"}, {word: "internet", ipa:"/ˈɪn.t̬ɚ.net/", thai: "อินเทอร์เน็ต"}, {word: "invent", ipa:"/ɪnˈvent/", thai: "ประดิษฐ์"}, {word: "issue", ipa:"/ˈɪʃ.uː/", thai: "ประเด็น"}, {word: "knowledge", ipa:"/ˈnɑː.lɪdʒ/", thai: "ความรู้"}, {word: "language", ipa:"/ˈlæŋ.ɡwɪdʒ/", thai: "ภาษา"}, {word: "learn", ipa:"/lɝːn/", thai: "เรียนรู้"}, {word: "level", ipa:"/ˈlev.əl/", thai: "ระดับ"}, {word: "limit", ipa:"/ˈlɪm.ɪt/", thai: "ขีดจำกัด"}, {word: "machine", ipa:"/məˈʃiːn/", thai: "เครื่องจักร"}, {word: "manage", ipa:"/ˈmæn.ɪdʒ/", thai: "จัดการ"}, {word: "measure", ipa:"/ˈmeʒ.ɚ/", thai: "วัดผล"},
+            {word: "memory", ipa:"/ˈmem.ə.ri/", thai: "หน่วยความจำ"}, {word: "method", ipa:"/ˈmeθ.əd/", thai: "วิธีการ"}, {word: "mobile", ipa:"/ˈmoʊ.bəl/", thai: "เคลื่อนที่/มือถือ"}, {word: "model", ipa:"/ˈmɑː.dəl/", thai: "แบบจำลอง"}, {word: "modern", ipa:"/ˈmɑː.dɚn/", thai: "ทันสมัย"}, {word: "network", ipa:"/ˈnet.wɝːk/", thai: "เครือข่าย"}, {word: "operate", ipa:"/ˈɑː.pə.reɪt/", thai: "ปฏิบัติการ"}, {word: "opportunity", ipa:"/ˌɑː.pɚˈtuː.nə.t̬i/", thai: "โอกาส"}, {word: "option", ipa:"/ˈɑːp.ʃən/", thai: "ทางเลือก"}, {word: "output", ipa:"/ˈaʊt.pʊt/", thai: "ผลลัพธ์"}, {word: "pattern", ipa:"/ˈpæt̬.ɚn/", thai: "รูปแบบ"}, {word: "perform", ipa:"/pɚˈfɔːrm/", thai: "ดำเนินการ"}, {word: "personal", ipa:"/ˈpɝː.sən.əl/", thai: "ส่วนบุคคล"}, {word: "plan", ipa:"/plæn/", thai: "วางแผน"}, {word: "platform", ipa:"/ˈplæt.fɔːrm/", thai: "แพลตฟอร์ม"},
+            {word: "absorb", ipa:"/əbˈzɔːrb/", thai: "ดูดซับ"}, {word: "atmosphere", ipa:"/ˈæt.mə.sfɪr/", thai: "ชั้นบรรยากาศ"}, {word: "biodiversity", ipa:"/ˌbaɪ.oʊ.daɪˈvɝː.sə.t̬i/", thai: "ความหลากหลายทางชีวภาพ"}, {word: "carbon", ipa:"/ˈkɑːr.bən/", thai: "คาร์บอน"}, {word: "climate", ipa:"/ˈklaɪ.mət/", thai: "สภาพภูมิอากาศ"}, {word: "conserve", ipa:"/kənˈsɝːv/", thai: "อนุรักษ์"}, {word: "consumption", ipa:"/kənˈsʌmp.ʃən/", thai: "การบริโภค"}, {word: "contaminate", ipa:"/kənˈtæm.ə.neɪt/", thai: "ปนเปื้อน"}, {word: "crisis", ipa:"/ˈkraɪ.sɪs/", thai: "วิกฤต"}, {word: "damage", ipa:"/ˈdæm.ɪdʒ/", thai: "ความเสียหาย"}, {word: "deforestation", ipa:"/diːˌfɔːr.əˈsteɪ.ʃən/", thai: "การตัดไม้ทำลายป่า"}, {word: "degrade", ipa:"/dɪˈɡreɪd/", thai: "ทำให้เสื่อมโทรม"}, {word: "destroy", ipa:"/dɪˈstrɔɪ/", thai: "ทำลาย"}, {word: "disaster", ipa:"/dɪˈzæs.tɚ/", thai: "ภัยพิบัติ"}, {word: "dispose", ipa:"/dɪˈspoʊz/", thai: "กำจัด"},
+            {word: "drought", ipa:"/draʊt/", thai: "ภัยแล้ง"}, {word: "ecology", ipa:"/iˈkɑː.lə.dʒi/", thai: "นิเวศวิทยา"}, {word: "ecosystem", ipa:"/ˈiː.koʊˌsɪs.təm/", thai: "ระบบนิเวศ"}, {word: "emission", ipa:"/iˈmɪʃ.ən/", thai: "การปล่อย"}, {word: "endangered", ipa:"/ɪnˈdeɪn.dʒɚd/", thai: "ใกล้สูญพันธุ์"}, {word: "energy", ipa:"/ˈen.ɚ.dʒi/", thai: "พลังงาน"}, {word: "environment", ipa:"/ɪnˈvaɪ.rən.mənt/", thai: "สิ่งแวดล้อม"}, {word: "erode", ipa:"/ɪˈroʊd/", thai: "กัดเซาะ"}, {word: "exhaust", ipa:"/ɪɡˈzɑːst/", thai: "ไอเสีย/ทำให้หมด"}, {word: "exploit", ipa:"/ɪkˈsplɔɪt/", thai: "ใช้ประโยชน์"}, {word: "extinct", ipa:"/ɪkˈstɪŋkt/", thai: "สูญพันธุ์"}, {word: "famine", ipa:"/ˈfæm.ɪn/", thai: "ความอดอยาก"}, {word: "fertile", ipa:"/ˈfɝː.t̬əl/", thai: "อุดมสมบูรณ์"}, {word: "flood", ipa:"/flʌd/", thai: "น้ำท่วม"}, {word: "fossil fuel", ipa:"/ˈfɑː.səl ˌfjʊəl/", thai: "เชื้อเพลิงฟอสซิล"},
+            {word: "accommodation", ipa:"/əˌkɑː.məˈdeɪ.ʃən/", thai: "ที่พัก"}, {word: "adventure", ipa:"/ədˈven.tʃɚ/", thai: "การผจญภัย"}, {word: "airline", ipa:"/ˈer.laɪn/", thai: "สายการบิน"}, {word: "arrival", ipa:"/əˈraɪ.vəl/", thai: "การมาถึง"}, {word: "attraction", ipa:"/əˈtræk.ʃən/", thai: "สถานที่ท่องเที่ยว"}, {word: "baggage", ipa:"/ˈbæɡ.ɪdʒ/", thai: "สัมภาระ"}, {word: "beach", ipa:"/biːtʃ/", thai: "ชายหาด"}, {word: "book", ipa:"/bʊk/", thai: "จอง"}, {word: "budget", ipa:"/ˈbʌdʒ.ɪt/", thai: "งบประมาณ"}, {word: "cancel", ipa:"/ˈkæn.səl/", thai: "ยกเลิก"}, {word: "cheap", ipa:"/tʃiːp/", thai: "ราคาถูก"}, {word: "check-in", ipa:"/ˈtʃek.ɪn/", thai: "เช็คอิน"}, {word: "city", ipa:"/ˈsɪt̬.i/", thai: "เมือง"}, {word: "convenient", ipa:"/kənˈviːn.jənt/", thai: "สะดวก"}, {word: "country", ipa:"/ˈkʌn.tri/", thai: "ประเทศ"},
+            {word: "culture", ipa:"/ˈkʌl.tʃɚ/", thai: "วัฒนธรรม"}, {word: "customs", ipa:"/ˈkʌs·təmz/", thai: "ศุลกากร"}, {word: "delicious", ipa:"/dɪˈlɪʃ·əs/", thai: "อร่อย"}, {word: "departure", ipa:"/dɪˈpɑr·tʃər/", thai: "การออกเดินทาง"}, {word: "destination", ipa:"/ˌdes·təˈneɪ·ʃən/", thai: "จุดหมายปลายทาง"}, {word: "direct", ipa:"/dəˈrekt/", thai: "โดยตรง"}, {word: "discount", ipa:"/ˈdɪsˌkaʊnt/", thai: "ส่วนลด"}, {word: "discover", ipa:"/dɪˈskʌv·ər/", thai: "ค้นพบ"}, {word: "enjoy", ipa:"/ɪnˈdʒɔɪ/", thai: "สนุก"}, {word: "entertainment", ipa:"/ˌen·tərˈteɪn·mənt/", thai: "ความบันเทิง"}, {word: "entrance", ipa:"/ˈen·trəns/", thai: "ทางเข้า"}, {word: "equipment", ipa:"/ɪˈkwɪp·mənt/", thai: "อุปกรณ์"}, {word: "expensive", ipa:"/ɪkˈspen·sɪv/", thai: "ราคาแพง"}, {word: "experience", ipa:"/ɪkˈspɪər·i·əns/", thai: "ประสบการณ์"}, {word: "explore", ipa:"/ɪkˈsplɔr/", thai: "สำรวจ"},
+            {word: "family", ipa:"/ˈfæm·ə·li/", thai: "ครอบครัว"}, {word: "famous", ipa:"/ˈfeɪ·məs/", thai: "มีชื่อเสียง"}, {word: "fantastic", ipa:"/fænˈtæs·tɪk/", thai: "ยอดเยี่ยม"}, {word: "far", ipa:"/fɑr/", thai: "ไกล"}, {word: "fast", ipa:"/fæst/", thai: "เร็ว"}, {word: "flight", ipa:"/flaɪt/", thai: "เที่ยวบิน"}, {word: "foreign", ipa:"/ˈfɔr·ən/", thai: "ต่างประเทศ"}, {word: "forget", ipa:"/fərˈɡet/", thai: "ลืม"}, {word: "free", ipa:"/fri/", thai: "ฟรี/ว่าง"}, {word: "friend", ipa:"/frend/", thai: "เพื่อน"}, {word: "fun", ipa:"/fʌn/", thai: "สนุก"}, {word: "go", ipa:"/ɡoʊ/", thai: "ไป"}, {word: "guide", ipa:"/ɡaɪd/", thai: "มัคคุเทศก์"}, {word: "happy", ipa:"/ˈhæp·i/", thai: "มีความสุข"}, {word: "healthy", ipa:"/ˈhel·θi/", thai: "สุขภาพดี"},
+            {word: "help", ipa:"/help/", thai: "ช่วยเหลือ"}, {word: "here", ipa:"/hɪər/", thai: "ที่นี่"}, {word: "holiday", ipa:"/ˈhɑl·əˌdeɪ/", thai: "วันหยุด"}, {word: "home", ipa:"/hoʊm/", thai: "บ้าน"}, {word: "hospitality", ipa:"/ˌhɑs·pɪˈtæl·ɪ·t̬i/", thai: "การต้อนรับ"}, {word: "hostel", ipa:"/ˈhɑs·təl/", thai: "โฮสเทล"}, {word: "hot", ipa:"/hɑt/", thai: "ร้อน"}, {word: "hotel", ipa:"/hoʊˈtel/", thai: "โรงแรม"}, {word: "hour", ipa:"/aʊər/", thai: "ชั่วโมง"}, {word: "idea", ipa:"/aɪˈdi·ə/", thai: "ความคิด"}, {word: "important", ipa:"/ɪmˈpɔr·tənt/", thai: "สำคัญ"}, {word: "information", ipa:"/ˌɪn·fərˈmeɪ·ʃən/", thai: "ข้อมูล"}, {word: "interest", ipa:"/ˈɪn·trəst/", thai: "ความสนใจ"}, {word: "international", ipa:"/ˌɪn·tərˈnæʃ·ə·nəl/", thai: "ระหว่างประเทศ"}, {word: "interview", ipa:"/ˈɪn·tərˌvju/", thai: "สัมภาษณ์"},
+            {word: "island", ipa:"/ˈaɪ·lənd/", thai: "เกาะ"}, {word: "itinerary", ipa:"/aɪˈtɪn·əˌrer·i/", thai: "แผนการเดินทาง"}, {word: "journey", ipa:"/ˈdʒɜr·ni/", thai: "การเดินทาง"}, {word: "know", ipa:"/noʊ/", thai: "รู้"}, {word: "landmark", ipa:"/ˈlændˌmɑrk/", thai: "แลนด์มาร์ค"}, {word: "language", ipa:"/ˈlæŋ·ɡwɪdʒ/", thai: "ภาษา"}, {word: "leave", ipa:"/liv/", thai: "ออกจาก"}, {word: "left", ipa:"/left/", thai: "ซ้าย"}, {word: "leisure", ipa:"/ˈli·ʒər/", thai: "เวลาว่าง"}, {word: "like", ipa:"/laɪk/", thai: "ชอบ"}, {word: "live", ipa:"/lɪv/", thai: "อาศัยอยู่"}, {word: "local", ipa:"/ˈloʊ·kəl/", thai: "ท้องถิ่น"}, {word: "locate", ipa:"/ˈloʊ·keɪt/", thai: "ตั้งอยู่"}, {word: "look", ipa:"/lʊk/", thai: "ดู"}, {word: "love", ipa:"/lʌv/", thai: "รัก"},
+            {word: "luggage", ipa:"/ˈlʌɡ·ɪdʒ/", thai: "กระเป๋าเดินทาง"}, {word: "luxury", ipa:"/ˈlʌk·ʃə·ri/", thai: "หรูหรา"}, {word: "map", ipa:"/mæp/", thai: "แผนที่"}, {word: "market", ipa:"/ˈmɑr·kɪt/", thai: "ตลาด"}, {word: "meet", ipa:"/mit/", thai: "พบ"}, {word: "memorable", ipa:"/ˈmem·ər·ə·bəl/", thai: "น่าจดจำ"}, {word: "money", ipa:"/ˈmʌn·i/", thai: "เงิน"}, {word: "monument", ipa:"/ˈmɑn·jə·mənt/", thai: "อนุสาวรีย์"}, {word: "mountain", ipa:"/ˈmaʊn·tən/", thai: "ภูเขา"}, {word: "museum", ipa:"/mjuˈzi·əm/", thai: "พิพิธภัณฑ์"}, {word: "music", ipa:"/ˈmju·zɪk/", thai: "ดนตรี"}, {word: "nature", ipa:"/ˈneɪ·tʃər/", thai: "ธรรมชาติ"}, {word: "near", ipa:"/nɪər/", thai: "ใกล้"}, {word: "need", ipa:"/nid/", thai: "ต้องการ"}, {word: "neighbor", ipa:"/ˈneɪ·bər/", thai: "เพื่อนบ้าน"}
+        ];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        shuffleArray(allWords);
+
+        const vocabularyByLevel = [];
+        const wordsPerLevel = 15;
+        for (let i = 0; i < allWords.length; i += wordsPerLevel) {
+            vocabularyByLevel.push(allWords.slice(i, i + wordsPerLevel));
+        }
+
+        const rewards = {
+            common: ["ไม้เท้าธรรมดา 🪵", "โล่ไม้เก่าๆ 🛡️", "เหรียญทองแดง 🥉"],
+            uncommon: ["เข็มทิศนักเดินทาง 🧭", "แผนที่โบราณ 📜", "อัญมณีสีฟ้า 💎"],
+            rare: ["ดาบเหล็กกล้า ⚔️", "มงกุฎเงิน 👑", "ขวดน้ำยาฟื้นพลัง ✨"],
+            epic: ["คทาเวทมนตร์ 🪄", "เกราะทองคำ 🌟", "ไข่มังกรในตำนาน 🐲"]
+        };
+        
+        const TOTAL_WORDS = 300;
+        const MAX_SCORE = 10;
+        const SCORE_PER_WORD = MAX_SCORE / TOTAL_WORDS;
+
+        let currentLevel = 0;
+        let currentWordIndex = 0;
+        let totalScore = 0;
+        let isListening = false;
+        let currentWordCorrect = false;
+        let levelAccuracyScores = [];
+
+        const gameScreen = document.getElementById('game-screen');
+        const levelDisplay = document.getElementById('level-display');
+        const wordProgressDisplay = document.getElementById('word-progress-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const wordDisplay = document.getElementById('word-display');
+        const ipaDisplay = document.getElementById('ipa-display');
+        const thaiDisplay = document.getElementById('thai-display');
+        const listenButton = document.getElementById('listen-button');
+        const speakButton = document.getElementById('speak-button');
+        const resultDisplay = document.getElementById('result-display');
+        const resultText = document.getElementById('result-text');
+        const nextButton = document.getElementById('next-button');
+        const rewardModal = document.getElementById('reward-modal');
+        const treasureChestIcon = document.getElementById('treasure-chest-icon');
+        const rewardItemName = document.getElementById('reward-item-name');
+        const closeRewardButton = document.getElementById('close-reward-button');
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        if(SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        }
+        
+        function startGame() {
+            document.getElementById('loading-screen')?.remove();
+            document.getElementById('auth-screen')?.remove();
+            gameScreen.style.display = 'block';
+
+            currentWordCorrect = false;
+            levelAccuracyScores = [];
+            rewardModal.classList.remove('active');
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            if (currentLevel >= vocabularyByLevel.length) {
+                showGameComplete();
+                return;
+            }
+            const currentWordData = vocabularyByLevel[currentLevel][currentWordIndex];
+            levelDisplay.textContent = currentLevel + 1;
+            wordProgressDisplay.textContent = `${currentWordIndex + 1} / ${vocabularyByLevel[currentLevel].length}`;
+            scoreDisplay.textContent = totalScore.toFixed(2);
+            wordDisplay.textContent = currentWordData.word;
+            ipaDisplay.textContent = currentWordData.ipa;
+            thaiDisplay.textContent = currentWordData.thai;
+            resultDisplay.className = 'mt-6 p-4 rounded-lg min-h-[100px] flex items-center justify-center transition-all duration-300 bg-gray-100';
+            resultText.textContent = "รอการออกเสียง...";
+            speakButton.disabled = false;
+            speakButton.classList.add('pulse-animation');
+            nextButton.style.display = 'none';
+        }
+
+        function handleNextWord() {
+            currentWordIndex++;
+            if (currentWordIndex >= vocabularyByLevel[currentLevel].length) {
+                showLevelComplete();
+            } else {
+                currentWordCorrect = false;
+                updateDisplay();
+            }
+        }
+        
+        function getRewardItem(avgAccuracy) {
+            let tier;
+            if (avgAccuracy > 0.95) tier = 'epic';
+            else if (avgAccuracy > 0.85) tier = 'rare';
+            else if (avgAccuracy > 0.70) tier = 'uncommon';
+            else tier = 'common';
+            
+            const tierRewards = rewards[tier];
+            const randomItem = tierRewards[Math.floor(Math.random() * tierRewards.length)];
+            return { item: randomItem, tier: tier };
+        }
+
+        function showLevelComplete() {
+            const avgAccuracy = levelAccuracyScores.length > 0 ? levelAccuracyScores.reduce((a, b) => a + b, 0) / levelAccuracyScores.length : 0;
+            const { item, tier } = getRewardItem(avgAccuracy);
+            
+            rewardItemName.textContent = item;
+            rewardModal.classList.add('active');
+            
+            treasureChestIcon.textContent = '📦';
+            treasureChestIcon.classList.remove('chest-open');
+            
+            setTimeout(() => {
+                treasureChestIcon.textContent = '🎁';
+                treasureChestIcon.classList.add('chest-open');
+            }, 500);
+            
+            currentLevel++;
+            currentWordIndex = 0;
+        }
+        
+        function showGameComplete() {
+             gameScreen.innerHTML = `<div class="card">
+                <h2 class="text-3xl font-bold mb-4">สุดยอดมาก! 🏆</h2>
+                <p class="text-xl mb-6">คุณเรียนรู้ครบทุกด่านแล้ว! คะแนนสุดท้าย: ${totalScore.toFixed(2)} / 10</p>
+                <button id="restart-button" class="btn btn-primary w-full">เริ่มใหม่</button>
+            </div>`;
+            document.getElementById('restart-button').addEventListener('click', () => {
+                location.reload();
+            });
+        }
+
+        function startListening() {
+            if (isListening || !recognition) return;
+            isListening = true;
+            speakButton.textContent = 'กำลังฟัง...';
+            speakButton.disabled = true;
+            speakButton.classList.remove('pulse-animation');
+            recognition.start();
+        }
+
+        function onRecognitionResult(event) {
+            const spokenText = event.results[0][0].transcript.trim().toLowerCase();
+            const confidence = event.results[0][0].confidence;
+            const targetWord = vocabularyByLevel[currentLevel][currentWordIndex].word.toLowerCase();
+            if (spokenText.includes(targetWord) && confidence >= 0.60) {
+                currentWordCorrect = true;
+                if (!levelAccuracyScores.includes(confidence)) { 
+                    totalScore += SCORE_PER_WORD;
+                    levelAccuracyScores.push(confidence);
+                }
+                resultDisplay.className = 'mt-6 p-4 rounded-lg min-h-[100px] flex items-center justify-center transition-all duration-300 bg-green-100 text-green-800';
+                resultText.innerHTML = `✔️ ผ่าน! (${(confidence * 100).toFixed(0)}%)<br>คุณพูดว่า: <span class="font-bold">${spokenText}</span>`;
+                nextButton.style.display = 'block';
+                speakButton.disabled = true;
+                scoreDisplay.textContent = totalScore.toFixed(2);
+            } else {
+                currentWordCorrect = false;
+                resultDisplay.className = 'mt-6 p-4 rounded-lg min-h-[100px] flex items-center justify-center transition-all duration-300 bg-red-100 text-red-800';
+                resultText.innerHTML = spokenText.includes(targetWord) 
+                    ? `❌ ความมั่นใจต่ำ (${(confidence * 100).toFixed(0)}%) ลองพูดให้ชัดขึ้น<br>คุณพูดว่า: <span class="font-bold">${spokenText}</span>`
+                    : `❌ คำไม่ถูกต้อง ลองอีกครั้ง<br>คุณพูดว่า: <span class="font-bold">${spokenText}</span>`;
+                speakButton.disabled = false;
+                speakButton.classList.add('pulse-animation');
+            }
+        }
+
+        function speakCorrectWord() {
+            const textToSpeak = vocabularyByLevel[currentLevel][currentWordIndex].word;
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            speechSynthesis.speak(utterance);
+        }
+
+        listenButton.addEventListener('click', speakCorrectWord);
+        speakButton.addEventListener('click', startListening);
+        nextButton.addEventListener('click', handleNextWord);
+        closeRewardButton.addEventListener('click', () => {
+            startGame();
+        });
+
+        if (recognition) {
+            recognition.onresult = onRecognitionResult;
+            recognition.onend = () => {
+                isListening = false;
+                if (!currentWordCorrect) {
+                     speakButton.textContent = '🎤 กดเพื่อพูด';
+                     speakButton.disabled = false;
+                }
+            };
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                resultText.textContent = `เกิดข้อผิดพลาด: ${event.error}`;
+                speakButton.disabled = false;
+            };
+        } else {
+             document.getElementById('speak-button').disabled = true;
+             document.getElementById('speak-button').textContent = "เบราว์เซอร์ไม่รองรับ";
+             resultText.textContent = "ขออภัย เบราว์เซอร์ของคุณไม่รองรับการรู้จำเสียงพูด";
+        }
+
+        // --- App Initialization ---
+        window.onload = startGame;
+
+    </script>
+</body>
+</html>
